@@ -54,4 +54,22 @@ export class QueryBuilder<
 		// @ts-ignore
 		return result as QueryResult<TableName, Options>;
 	}
+
+	//@ts-ignore
+	async save<Options extends Partial<QueryResult<TableName, {}>>>(options: Options) {
+		const url = this.client.buildUrl(String(this.table), options as Record<string, unknown>);
+
+		const request = new Request(url, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(options)
+		});
+
+		const result = await this.client.executeRequest(request);
+
+		// @ts-ignore
+		return result as QueryResult<TableName, Options>;
+	}
 }

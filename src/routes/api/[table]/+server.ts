@@ -3,8 +3,8 @@ import { json } from '@sveltejs/kit';
 
 export async function GET({ params, url: { searchParams } }) {
 	const tableName = params.table as keyof typeof db.query;
-	const search = searchParams.get('search') || '';
 	const query = {
+		search: searchParams.get('search') || '',
 		with: JSON.parse(searchParams.get('with') || '{}'),
 		limit: Number(searchParams.get('limit') || 15),
 		offset: Number(searchParams.get('offset') || 0),
@@ -18,7 +18,7 @@ export async function GET({ params, url: { searchParams } }) {
 		if (typeof prop !== 'function') {
 			columns.push(key);
 			if (prop.columnType == 'PgText') {
-				filter.push({ [key]: { ilike: `%${search}%` } });
+				filter.push({ [key]: { ilike: `%${query.search}%` } });
 			}
 		}
 	}
@@ -26,7 +26,6 @@ export async function GET({ params, url: { searchParams } }) {
 	// @ts-ignore
 	const raw = db.query[tableName].findMany({
 		...query,
-
 		where: {
 			AND: [{ OR: filter }, query.where]
 		}
@@ -68,19 +67,6 @@ async function countSQL(raw: { sql: string; params: any[] }) {
 	const result = await db.execute(compiledSql);
 	return Number(result?.at(0)?.count);
 }
-// export async function GET({ params, request }) {
-// 	const { table } = params;
-// 	const data = await request.json();
-// 	const tableName = 'users' as keyof typeof relations.tables;
-// 	// const tableName = table as keyof typeof relations.tables;
-
-// 	const res = await db.query[tableName]
-// 		// @ts-ignore
-// 		.findMany({});
-
-// 	console.log(data);
-// 	return json(data);
-// }
 
 export async function POST({ params, request }) {
 	const { table } = params;

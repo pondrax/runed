@@ -13,12 +13,13 @@ export class BaseClient {
 	}
 
 	buildUrl(path: string, query: Record<string, unknown> = {}) {
-		const normalizedPath = this.normalizePath(path);
-		const url = new URL(`${this.baseUrl}/api/${normalizedPath}`);
-
+		const url = new URL(`${this.baseUrl}/api/${this.normalizePath(path)}`);
 		Object.entries(query).forEach(([key, value]) => {
 			if (value == null) return;
-			url.searchParams.append(key, ['with'].includes(key) ? JSON.stringify(value) : String(value));
+			url.searchParams.append(
+				key,
+				['with', 'where'].includes(key) ? JSON.stringify(value) : String(value)
+			);
 		});
 
 		return url.toString();
