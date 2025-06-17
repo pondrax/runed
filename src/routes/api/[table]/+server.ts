@@ -4,7 +4,7 @@ import { json } from '@sveltejs/kit';
 export async function GET({ params, url: { searchParams } }) {
 	const tableName = params.table as keyof typeof db.query;
 	const query = {
-		search: searchParams.get('search') || '',
+		search: searchParams.get('search'),
 		with: JSON.parse(searchParams.get('with') || '{}'),
 		limit: Number(searchParams.get('limit') || 15),
 		offset: Number(searchParams.get('offset') || 0),
@@ -14,10 +14,10 @@ export async function GET({ params, url: { searchParams } }) {
 
 	const columns: string[] = [];
 	const filter = [];
-	for (const [key, prop] of Object.entries(relations.tables.users)) {
+	for (const [key, prop] of Object.entries(relations.tables[tableName])) {
 		if (typeof prop !== 'function') {
 			columns.push(key);
-			if (prop.columnType == 'PgText') {
+			if (prop.columnType == 'PgText' && query.search) {
 				filter.push({ [key]: { ilike: `%${query.search}%` } });
 			}
 		}

@@ -3,7 +3,8 @@ import { init } from '@paralleldrive/cuid2';
 import { sql } from 'drizzle-orm';
 import crypto from 'node:crypto';
 
-const secret = import.meta.env ? import.meta.env.VITE_APP_SECRET : process.env.APP_SECRET;
+const secret = process.env.APP_SECRET;
+// const secret = import.meta.env ? import.meta.env.VITE_APP_SECRET : process.env.APP_SECRET;
 console.log('APP_SECRET', secret, process.env.APP_SECRET);
 
 const algorithm = 'aes-256-cbc';
