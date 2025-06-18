@@ -1,6 +1,7 @@
 import { BaseClient } from './base';
 import { QueryBuilder } from './query';
-import type { GenericSchema } from './types';
+import type { GenericSchema, QueryOptions } from './types';
+import type { DB } from '../server/types';
 
 export class Client<DatabaseSchema extends GenericSchema> extends BaseClient {
 	constructor(baseUrl?: string) {
@@ -13,3 +14,5 @@ export class Client<DatabaseSchema extends GenericSchema> extends BaseClient {
 		return new QueryBuilder(table, this);
 	}
 }
+
+export type { DB, QueryOptions };

@@ -1,7 +1,9 @@
-import { db, relations } from '$lib/db/server';
+import { env } from '$env/dynamic/private';
+import { db, relations, t } from '$lib/db/server';
 import { json } from '@sveltejs/kit';
 
 export async function GET({ params, url: { searchParams } }) {
+	const start = Date.now();
 	const tableName = params.table as keyof typeof db.query;
 	const query = {
 		search: searchParams.get('search'),
@@ -17,8 +19,14 @@ export async function GET({ params, url: { searchParams } }) {
 	for (const [key, prop] of Object.entries(relations.tables[tableName])) {
 		if (typeof prop !== 'function') {
 			columns.push(key);
-			if (prop.columnType == 'PgText' && query.search) {
-				filter.push({ [key]: { ilike: `%${query.search}%` } });
+			if (query.search) {
+				if (prop.columnType == 'PgText') {
+					filter.push({ [key]: { ilike: `%${query.search}%` } });
+				} else {
+					filter.push({
+						RAW: (table: any) => t.sql`${table[key]}::text ILIKE ${`%${query.search}%`}`
+					});
+				}
 			}
 		}
 	}
@@ -30,14 +38,20 @@ export async function GET({ params, url: { searchParams } }) {
 			AND: [{ OR: filter }, query.where]
 		}
 	});
+	const rawSQL = raw.toSQL();
+	// console.log(filter, rawSQL);
 	const items = await raw;
 	const totalItems = await countSQL(raw.toSQL());
 
+	const meta = {
+		columns,
+		debug: env.APP_DEBUG == 'true' && rawSQL
+	};
+
 	return json({
-		meta: {
-			columns
-		},
+		meta,
 		items,
+		elapsed: Date.now() - start,
 		page: query.offset / query.limit + 1,
 		perPage: query.limit,
 		totalItems,

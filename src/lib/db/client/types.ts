@@ -12,3 +12,21 @@ export type GenericSchema = {
 		};
 	};
 };
+
+export type QueryOptions<T extends GenericSchema, TableName extends keyof T['schema']> = Parameters<
+	T['query'][TableName]['findMany']
+>[0] & {
+	search?: string;
+};
+
+export type PaginatedResponse<T> = {
+	items: T[];
+	meta: {
+		columns: Extract<keyof T, string>[];
+	};
+	page: number;
+	perPage: number;
+	totalItems: number;
+	totalPages: number;
+	elapsed: number;
+};

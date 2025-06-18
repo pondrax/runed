@@ -18,7 +18,7 @@ export class BaseClient {
 			if (value == null) return;
 			url.searchParams.append(
 				key,
-				['with', 'where'].includes(key) ? JSON.stringify(value) : String(value)
+				['with', 'where', 'orderBy'].includes(key) ? JSON.stringify(value) : String(value)
 			);
 		});
 
@@ -35,7 +35,7 @@ export class BaseClient {
 		return this;
 	}
 
-	async executeRequest(request: Request) {
+	async send(request: Request) {
 		if (this.hooks.beforeSend) {
 			request = await this.hooks.beforeSend({ request });
 		}

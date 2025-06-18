@@ -5,3 +5,13 @@
 		dark --prefersdark,
 		cupcake;
 }
+
+html,
+body {
+	@apply bg-base-200;
+}
+
+.animate-spin-reverse {
+	@apply animate-spin;
+	animation-direction: reverse;
+}

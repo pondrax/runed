@@ -4,6 +4,11 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "start": "vite-node build/index.js",
+    "serve": "pm2 delete my-app || true && pm2 start pnpm --name my-app -- run start",
+    "stop": "pm2 delete my-app",
+    "logs": "pm2 logs my-app",
+    "status": "pm2 monit",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
@@ -21,6 +26,7 @@
   "devDependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
     "@sveltejs/adapter-auto": "^6.0.1",
+    "@sveltejs/adapter-node": "^5.2.12",
     "@sveltejs/kit": "^2.21.5",
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@tailwindcss/vite": "^4.1.10",
@@ -41,7 +47,8 @@
   "dependencies": {
     "@inlang/paraglide-js": "^2.1.0",
     "drizzle-orm": "1.0.0-beta.1-c0277c0",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "vite-node": "^3.2.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

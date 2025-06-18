@@ -9,21 +9,6 @@ export type DB = {
 type Schema = DB['schema'];
 type Query = DB['query'];
 
-// export type DebugQueryResult<
-// 	TableName extends keyof Schema,
-// 	QueryConfig extends Parameters<Query[TableName]['findMany']>[0]
-// > = {
-// 	$meta: {
-// 		columns: keyof Schema[TableName]['columns'];
-// 		relations: Schema[TableName]['relations'];
-// 	};
-// 	items: BuildQueryResult<
-// 		Schema,
-// 		Schema[TableName],
-// 		QueryConfig extends { with: infer With } ? { with: With } : {}
-// 	>;
-// };
-
 export type QueryResult<
 	TableName extends keyof Schema,
 	QueryConfig extends Parameters<Query[TableName]['findMany']>[0]
@@ -46,4 +31,6 @@ type Tes = QueryResult<
 		};
 	}
 >;
+
+type Keys = Extract<keyof Tes, string>;
 // type Item = Tes['items'][number];
