@@ -11,7 +11,8 @@ export async function GET({ params, url: { searchParams } }) {
 		limit: Number(searchParams.get('limit') || 15),
 		offset: Number(searchParams.get('offset') || 0),
 		orderBy: JSON.parse(searchParams.get('orderBy') || '{}'),
-		where: JSON.parse(searchParams.get('where') || '{}')
+		where: JSON.parse(searchParams.get('where') || '{}'),
+		total: searchParams.get('total') == 'false' ? false : true
 	};
 
 	const columns: string[] = [];
@@ -40,23 +41,28 @@ export async function GET({ params, url: { searchParams } }) {
 	});
 	const rawSQL = raw.toSQL();
 	// console.log(filter, rawSQL);
+	const startQuery = Date.now();
 	const items = await raw;
-	const totalItems = await countSQL(raw.toSQL());
 
-	const meta = {
-		columns,
-		debug: env.APP_DEBUG == 'true' && rawSQL
-	};
-
-	return json({
-		meta,
+	const result: Record<string, any> = {
+		meta: {
+			columns,
+			debug: env.APP_DEBUG == 'true' && {
+				SQL: rawSQL,
+				elapsed: Date.now() - startQuery
+			}
+		},
 		items,
 		elapsed: Date.now() - start,
 		page: query.offset / query.limit + 1,
-		perPage: query.limit,
-		totalItems,
-		totalPages: Math.ceil(totalItems / query.limit)
-	});
+		perPage: query.limit
+	};
+	if (query.total) {
+		const totalItems = await countSQL(raw.toSQL());
+		result.totalItems = totalItems;
+		result.totalPages = Math.ceil(totalItems / query.limit);
+	}
+	return json(result);
 }
 
 async function countSQL(raw: { sql: string; params: any[] }) {

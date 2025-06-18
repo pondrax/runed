@@ -17,6 +17,7 @@ export type QueryOptions<T extends GenericSchema, TableName extends keyof T['sch
 	T['query'][TableName]['findMany']
 >[0] & {
 	search?: string;
+	total?: boolean;
 };
 
 export type PaginatedResponse<T> = {

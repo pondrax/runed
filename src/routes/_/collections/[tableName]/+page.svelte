@@ -11,7 +11,8 @@
 			search: '',
 			orderBy: { id: 'desc' },
 			offset: 0,
-			limit: 15
+			limit: 15,
+			total: false
 		})
 	);
 	const schema = api.send('/api/schema');
