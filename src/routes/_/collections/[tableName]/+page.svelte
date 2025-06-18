@@ -9,12 +9,9 @@
 	const record = $derived(
 		api.findMany(table, {
 			search: '',
-			with: {},
 			orderBy: { id: 'desc' },
 			offset: 0,
 			limit: 15
-			// limit: 10,
-			// offset: 0
 		})
 	);
 	const schema = api.send('/api/schema');
@@ -78,7 +75,8 @@
 								role="button"
 								class="btn btn-sm btn-ghost font-normal hover:bg-transparent"
 							>
-								{record.query.offset + 1} / {Math.min(
+								{record.current?.elapsed} ms •
+								{record.query.offset + 1} - {Math.min(
 									record.query.offset + record.query.limit,
 									record.current?.totalItems ?? 0
 								)}
@@ -89,7 +87,7 @@
 								tabindex="0"
 								class="dropdown-content menu bg-base-200 rounded-box z-1 mt-1 w-16 p-0 shadow-sm"
 							>
-								{#each [15, 25, 50, 100] as limit}
+								{#each [15, 25, 50, 100, 150, 250, 500] as limit}
 									<li>
 										<button
 											type="button"
@@ -117,7 +115,7 @@
 
 							<input
 								type="number"
-								class="input input-sm input-bordered w-10"
+								class="input input-sm input-bordered w-15"
 								min="1"
 								bind:value={
 									() => Math.ceil(record.query.offset / record.query.limit) + 1,

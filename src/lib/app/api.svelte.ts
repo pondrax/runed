@@ -19,29 +19,34 @@ export const api = {
 				return await client.send(request);
 			},
 			options
-		) as ResourceReturn<any> & {
-			query: typeof query;
-		};
-		records.query = query;
-		return records;
+		);
+		const result: typeof records & {
+			query?: typeof query;
+		} = records;
+
+		result.query = query;
+		return result;
 	},
 	findMany<TableName extends keyof DB['schema'], Query extends QueryOptions<DB, TableName>>(
 		table: TableName,
 		params: Query = {} as Query,
 		options: ResourceOptions<{}> = { debounce: 300 }
 	) {
-		const query = $state(params);
+		const query: Query = $state(params);
 		const records = resource(
 			() => ({ ...query }),
 			async () => {
 				return client.from(table).findMany(query);
 			},
 			options
-		) as ResourceReturn<any> & {
-			query: typeof query;
-		};
-		records.query = query;
-		return records;
+		);
+
+		const result: typeof records & {
+			query?: typeof query;
+		} = records;
+
+		result.query = query;
+		return result;
 	}
 };
 
