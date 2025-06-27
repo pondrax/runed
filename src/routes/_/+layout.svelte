@@ -1,11 +1,20 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api, app } from '$lib/app';
+	import { app } from '$lib/app';
 
 	let { children } = $props();
-	const schema = api.send('/api/schema');
+
+	$effect(() => {
+		if (page.params.table == '') {
+			goto('/_/collections/users');
+		}
+	});
 </script>
 
+<svelte:head>
+	<title>Runed Base</title>
+</svelte:head>
 <div class="drawer drawer-open">
 	<input id="main" type="checkbox" class="drawer-toggle" />
 	<div class="drawer-content">
@@ -36,10 +45,10 @@
 					type="button"
 					class="justify-center rounded-lg p-1"
 					aria-label="setting"
-					onclick={() => (app.sidebar = !app.sidebar)}
+					onclick={() => (app.current.sidebar = !app.current.sidebar)}
 				>
 					<iconify-icon
-						icon={app.sidebar ? 'bx:arrow-to-left' : 'bx:arrow-to-right'}
+						icon={app.current.sidebar ? 'bx:arrow-to-left' : 'bx:arrow-to-right'}
 						class="text-3xl"
 					></iconify-icon>
 				</button>
@@ -47,3 +56,5 @@
 		</ul>
 	</div>
 </div>
+
+<!-- {JSON.stringify(app.current, null, 2)} -->

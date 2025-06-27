@@ -1,5 +1,5 @@
 import { pgTable, integer, text } from 'drizzle-orm/pg-core';
-import { created, id, updated } from '../utils';
+import { created, encryptedText, id, updated } from '../utils';
 
 export const users = pgTable('users', {
 	id: id(),
@@ -13,7 +13,7 @@ export const users = pgTable('users', {
 
 export const interns = pgTable('interns', {
 	id: id(),
-	name: text('name').notNull(),
+	name: encryptedText('name').notNull(),
 	email: text('email').notNull().unique(),
 	password: text('password'),
 	created,

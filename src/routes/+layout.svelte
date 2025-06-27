@@ -2,12 +2,12 @@
 	import '../app.css';
 	import 'iconify-icon';
 	import { app } from '$lib/app';
-	import { fade } from 'svelte/transition';
 
 	let { children } = $props();
 </script>
 
-<progress class="progress fixed top-0 z-15 h-2 w-full" class:invisible={!app.loading}></progress>
+<progress class="progress fixed top-0 z-15 h-2 w-full" class:invisible={!app.current.loading}
+></progress>
 <!-- {#if app.loading}
 	<div class="fixed top-0 right-0 left-0 z-10 -mt-3" in:fade>
 		<progress class="progress w-full"></progress>
@@ -18,7 +18,7 @@
 
 <div id="main-toast" class="toast z-99">
 	<div class="not-hover:stack stack-top flex w-64 flex-col gap-1">
-		{#each app.alerts as alert}
+		{#each app.current.alerts as alert}
 			<div
 				role="alert"
 				class="alert bg-base-100 shadow-base-content/20 relative items-start rounded-xl shadow"

@@ -1,11 +1,11 @@
 import { customType, text, timestamp } from 'drizzle-orm/pg-core';
+import { env } from '$env/dynamic/private';
 import { init } from '@paralleldrive/cuid2';
 import { sql } from 'drizzle-orm';
 import crypto from 'node:crypto';
 
-const secret = process.env.APP_SECRET;
-// const secret = import.meta.env ? import.meta.env.VITE_APP_SECRET : process.env.APP_SECRET;
-console.log('APP_SECRET', secret, process.env.APP_SECRET);
+const secret = env.APP_SECRET;
+console.log('APP_SECRET', secret);
 
 const algorithm = 'aes-256-cbc';
 const key = crypto.createHash('sha256').update(String(secret)).digest(); // 32 bytes

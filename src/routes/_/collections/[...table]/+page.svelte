@@ -1,35 +1,47 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { api, app } from '$lib/app';
+	import { api, app, createId, d } from '$lib/app';
 	import type { DB } from '$lib/db/client';
+	import { fly } from 'svelte/transition';
 
 	type TableName = keyof DB['schema'];
-	let table: TableName = $derived(page.params.tableName as TableName);
+	let table: TableName = $derived(page.params.table as TableName);
 
-	const record = $derived(
-		api.findMany(table, {
-			search: '',
-			orderBy: { id: 'desc' },
-			offset: 0,
-			limit: 15,
-			total: false
-		})
-	);
 	const schema = api.send('/api/schema');
-	const items = $derived(record.current?.items ?? []);
 
 	const columns = $derived(Object.entries(schema.current?.tables?.[table]?.columns ?? {})) as [
 		string,
 		{ type: string; primaryKey: boolean }
 	][];
-	// const columns = $derived(record.current?.meta?.columns ?? []);
+
+	const record = $derived(
+		api.get(table, {
+			search: '',
+			orderBy: { id: 'desc' }
+		})
+	);
+
+	async function save(opt: Parameters<typeof record.save>[0]) {
+		record.save(opt);
+	}
+
+	let edit: Parameters<typeof record.save>[0] = $state({});
+	const items = $derived(record.current?.items ?? []);
+	const appended = $derived.by(() => {
+		const append: typeof items = [];
+		for (const id in edit) {
+			if (items.find((item) => item.id === id)) continue;
+			append.push({ id });
+		}
+		return items.concat(append);
+	});
 </script>
 
-<div class="drawer" class:drawer-open={app.sidebar}>
+<div class="drawer" class:drawer-open={app.current.sidebar}>
 	<input id="sidebar" type="checkbox" class="drawer-toggle" />
 	<div class="drawer-content flex h-screen min-h-0 flex-col p-2">
 		<div class="bg-base-100 rounded-box h-full p-2 shadow">
-			<div class="space-y-2 p-3">
+			<div class="flex h-full flex-col gap-2 p-3">
 				<div class="flex justify-between">
 					<div class="breadcrumbs p-0 text-sm capitalize">
 						<ul>
@@ -50,10 +62,47 @@
 						</ul>
 					</div>
 
-					<button type="button" class="btn btn-sm btn-secondary">
-						<iconify-icon icon="bx:plus"></iconify-icon>
-						Add Record
-					</button>
+					<div class="space-x-1">
+						<button
+							type="button"
+							class="btn btn-sm btn-info"
+							onclick={() => {
+								const id = createId();
+								edit[id] = {
+									id
+								};
+							}}
+						>
+							<iconify-icon icon="bx:plus"></iconify-icon>
+							Add Record
+						</button>
+						{#if Object.keys(edit).length > 0}
+							<button
+								in:fly
+								type="button"
+								class="btn btn-sm btn-secondary"
+								onclick={async () => {
+									await record.request.save(edit);
+									record.refresh();
+									setTimeout(() => {
+										edit = {};
+									}, 1000);
+								}}
+							>
+								Save Record {Object.keys(edit).length}
+							</button>
+							<button
+								in:fly
+								type="button"
+								class="btn btn-sm btn-link btn-error px-0"
+								onclick={() => {
+									edit = {};
+								}}
+							>
+								Discard Changes
+							</button>
+						{/if}
+					</div>
 				</div>
 
 				<div class="flex justify-between gap-2">
@@ -77,18 +126,22 @@
 								class="btn btn-sm btn-ghost font-normal hover:bg-transparent"
 							>
 								{record.current?.elapsed} ms •
-								{record.query.offset + 1} - {Math.min(
-									record.query.offset + record.query.limit,
-									record.current?.totalItems ?? 0
-								)}
-								of {record.current?.totalItems ?? '-'}
+								{#if record.current?.totalItems > 0}
+									{Math.min(record.query.offset + 1, record.current.totalItems)}
+									-
+									{Math.min(record.query.offset + record.query.limit, record.current?.totalItems)}
+									of
+									{record.current?.totalItems}
+								{:else}
+									no item
+								{/if}
 							</div>
 							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 							<ul
 								tabindex="0"
-								class="dropdown-content menu bg-base-200 rounded-box z-1 mt-1 w-16 p-0 shadow-sm"
+								class="dropdown-content menu bg-base-200 rounded-box z-1 mt-1 w-full p-1 shadow-sm"
 							>
-								{#each [15, 25, 50, 100, 150, 250, 500] as limit}
+								{#each [15, 25, 50, 100, 250] as limit}
 									<li>
 										<button
 											type="button"
@@ -152,10 +205,15 @@
 								class="dropdown-content menu bg-base-200 rounded-box z-1 mt-1 w-52 p-0 shadow-sm"
 							>
 								<li>
-									<button onclick={record.refetch}>
-										<iconify-icon icon="bx:refresh" class="text-lg"></iconify-icon>
-										Refresh Rows
-									</button>
+									<label>
+										<input
+											type="checkbox"
+											class="checkbox"
+											onchange={() => (record.query.total = !record.query?.total)}
+											checked={record.query?.total}
+										/>
+										Total Items
+									</label>
 								</li>
 								<li class="m-0"></li>
 							</ul>
@@ -163,7 +221,7 @@
 					</div>
 				</div>
 
-				<div class="overflow-x-auto">
+				<div class="overflow-x-auto p-1">
 					<table class="table-sm table-zebra table w-full">
 						<thead>
 							<tr>
@@ -175,9 +233,7 @@
 									{/if}
 								</th>
 								{#each columns as [key, prop]}
-									{@const currentOrder = (
-										record.query.orderBy as Record<string, string | undefined>
-									)[key]}
+									{@const currentOrder = record.query.orderBy[key]}
 									<th class="!p-0" class:w-1={prop.primaryKey}>
 										<button
 											type="button"
@@ -216,15 +272,15 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#if record.current?.totalItems === 0}
+							{#if appended.length == 0}
 								<tr>
 									<td colspan="100">No records found</td>
 								</tr>
 							{:else}
-								{#each items as item}
-									<tr>
+								{#each appended as item}
+									<tr class="hover:bg-base-200 [&>*]:p-0">
 										<th class="w-1">
-											<input type="checkbox" class="checkbox" />
+											<input type="checkbox" class="checkbox mx-3" />
 										</th>
 										{#each columns as [key, prop]}
 											{#if prop.primaryKey}
@@ -249,13 +305,36 @@
 														</button>
 													</div>
 												</td>
-											{:else if prop.type.includes('timestamp')}
-												<td class="w-1 whitespace-nowrap">
-													{item[key] ? new Date(item[key]).toLocaleString() : ''}
-												</td>
 											{:else}
 												<td>
-													{item[key]}
+													<input
+														type={prop.type.includes('timestamp')
+															? 'datetime-local'
+															: prop.type === 'integer'
+																? 'number'
+																: 'text'}
+														class={[
+															item[key] === edit?.[item.id]?.[key] && 'bg-warning/50',
+															'input input-ghost input-sm w-full rounded-none read-only:outline-none focus:bg-transparent'
+														]}
+														bind:value={
+															() =>
+																prop.type.includes('timestamp')
+																	? d(item[key]).format('YYYY-MM-DDTHH:mm')
+																	: item[key],
+															(v) => {
+																item[key] = v;
+																edit[item.id] = {
+																	...(edit[item.id] ?? {}),
+																	[key]: v
+																};
+															}
+														}
+														readonly
+														onfocus={(e) => e.detail == 0 && e.target.removeAttribute('readonly')}
+														ondblclick={(e) => e.target.removeAttribute('readonly')}
+														onblur={(e) => e.target.setAttribute('readonly', true)}
+													/>
 												</td>
 											{/if}
 										{/each}
@@ -265,14 +344,13 @@
 						</tbody>
 					</table>
 				</div>
-				<div class="p-5">
-					<div class="text-xs whitespace-pre-wrap">
-						{JSON.stringify(record.current, null, 2)}
-					</div>
-				</div>
+
+				<textarea class="mt-auto min-h-50 w-full text-xs" value={JSON.stringify(appended, null, 2)}
+				></textarea>
 			</div>
 		</div>
 	</div>
+
 	<div class="drawer-side">
 		<label for="sidebar" aria-label="close sidebar" class="drawer-overlay"></label>
 		<div class="bg-base-200 flex h-screen w-50">
@@ -295,7 +373,7 @@
 				{:else}
 					{#each Object.entries(schema?.current?.tables ?? {}) as [key, value]}
 						<li>
-							<a href="/_/collections/{key}" class:menu-active={page.params.tableName == key}>
+							<a href="/_/collections/{key}" class:menu-active={page.params.table == key}>
 								<iconify-icon icon="bx:table"></iconify-icon>
 								{key}
 							</a>

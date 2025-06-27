@@ -1,3 +1,4 @@
+import { env as pub } from '$env/dynamic/public';
 import { env } from '$env/dynamic/private';
 import { db, relations, t } from '$lib/db/server';
 import { json } from '@sveltejs/kit';
@@ -12,7 +13,7 @@ export async function GET({ params, url: { searchParams } }) {
 		offset: Number(searchParams.get('offset') || 0),
 		orderBy: JSON.parse(searchParams.get('orderBy') || '{}'),
 		where: JSON.parse(searchParams.get('where') || '{}'),
-		total: searchParams.get('total') == 'false' ? false : true
+		total: searchParams.get('total') !== 'false'
 	};
 
 	const columns: string[] = [];
@@ -47,7 +48,7 @@ export async function GET({ params, url: { searchParams } }) {
 	const result: Record<string, any> = {
 		meta: {
 			columns,
-			debug: env.APP_DEBUG == 'true' && {
+			debug: pub.PUBLIC_APP_DEBUG == 'true' && {
 				SQL: rawSQL,
 				elapsed: Date.now() - startQuery
 			}
@@ -57,8 +58,10 @@ export async function GET({ params, url: { searchParams } }) {
 		page: query.offset / query.limit + 1,
 		perPage: query.limit
 	};
+	// console.log('count', query.total);
 	if (query.total) {
 		const totalItems = await countSQL(raw.toSQL());
+		// console.log('totalItems', totalItems);
 		result.totalItems = totalItems;
 		result.totalPages = Math.ceil(totalItems / query.limit);
 	}
@@ -90,9 +93,61 @@ async function countSQL(raw: { sql: string; params: any[] }) {
 
 export async function POST({ params, request }) {
 	const { table } = params;
-	const data = await request.json();
-	console.log(data);
-	return json({ message: `Data received for table: ${table}`, data });
+	const formData = await request.formData();
+	const ids = [...new Set([...formData.keys()].map((k) => k.split(':')[0]))];
+
+	const records: Record<string, any> = {};
+	// @ts-ignore
+	const existing = (await db.query[table].findMany({
+		where: { id: { in: ids } }
+	})) as Record<string, any>[];
+
+	for (const [key, value] of formData.entries()) {
+		const [itemId, fieldName] = key.split(':');
+		const exist = existing.find((item) => item.id === itemId);
+		records[itemId] = records[itemId] ?? {};
+		// const data: Record<string, any> = {};
+
+		if (value instanceof Blob) {
+			let [_, field, filename] = fieldName.match(/^([^\[]+)\[([^\]]+)\]$/) || [];
+			const buffer = await value.arrayBuffer();
+			// console.log(field, fieldName)
+			const multiple = field?.endsWith('.multi');
+			field = field.replace(/\+|\.multi/g, '');
+			// filename = await storage.save(buffer, filename);
+
+			const current = records[itemId][field] ?? exist?.[field] ?? [];
+			const files = Array.isArray(current) ? [...current, filename] : [current, filename];
+			if (multiple) {
+				records[itemId][field] = files;
+			} else {
+				// removedFiles.push(...files.slice(0, -1));
+				records[itemId][field] = [filename];
+			}
+		} else if (fieldName.startsWith('-')) {
+			const field = fieldName.split('-').pop()!;
+			records[itemId][field] = (exist?.[field] || []).filter((f: string) => f !== value);
+			// removedFiles.push(String(value));
+		} else if (fieldName === 'password') {
+			// records[itemId][fieldName] = await hash(String(value), {
+			// 	memoryCost: 19456,
+			// 	timeCost: 2,
+			// 	outputLen: 32,
+			// 	parallelism: 1
+			// });
+		} else if (!['created', 'updated'].includes(fieldName)) {
+			try {
+				records[itemId][fieldName] = JSON.parse(String(value));
+			} catch {
+				records[itemId][fieldName] = value;
+			}
+		}
+		// console.log(data)
+		// records[itemId] = { ...records[itemId], ...data }
+	}
+
+	console.log(formData, ids);
+	return json({ message: `Data received for table: ${table}`, formData });
 }
 
 export async function PUT({ params, request }) {
